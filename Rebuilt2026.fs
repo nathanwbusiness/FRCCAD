@@ -681,6 +681,7 @@ function buildMech(context is Context, id is Id, spec is map) returns map
     const showPose = spec.poseAt(spec.pShow);
     var parts = [];
     var envIds = [];
+    var ghostQueries = [];   // each ghost has its own top-level id: Onshape won't let one parent id span other operations
 
     for (var e = 0; e < size(spec.elements); e += 1)
     {
@@ -723,12 +724,13 @@ function buildMech(context is Context, id is Id, spec is map) returns map
         // see-through copy of the other pose (stowed vs deployed)
         if (spec.pGhost != undefined && el.fixed != true)
         {
-            opPattern(context, id + "ghost" + ("g" ~ e), {
+            opPattern(context, id + ("ghost" ~ e), {
                         "entities" : body,
                         "transforms" : [spec.poseAt(spec.pGhost)[e]],
                         "instanceNames" : ["g"],
                         "copyPropertiesAndAttributes" : false
                     });
+            ghostQueries = append(ghostQueries, qCreatedBy(id + ("ghost" ~ e), EntityType.BODY));
         }
 
         opTransform(context, id + ("move" ~ e), { "bodies" : body, "transform" : showPose[e] });
@@ -738,7 +740,7 @@ function buildMech(context is Context, id is Id, spec is map) returns map
     }
 
     const partQuery = qUnion(parts);
-    const ghostQuery = qCreatedBy(id + "ghost", EntityType.BODY);
+    const ghostQuery = qUnion(ghostQueries);
     if (spec.pGhost != undefined)
     {
         styleReference(context, ghostQuery, spec.name ~ " - other pose", withAlpha(spec.color, GHOST_ALPHA));
